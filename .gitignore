@@ -1,0 +1,20 @@
+# Dependency directories
+node_modules/
+dist/
+
+# Excel data files (Sensitive credentials)
+data/*.xlsx
+data/automation_results.xlsx
+
+# Browser profiles and temporary files
+temp_chrome_profile/
+temp_chrome_profiles/
+temp/
+*.log
+
+# Environment files
+.env
+
+# System files
+.DS_Store
+Thumbs.db
