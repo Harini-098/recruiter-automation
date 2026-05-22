@@ -97,33 +97,50 @@ export class ExcelHandler {
         return credentials;
     }
 
-    async writeResult(result: AutomationResult): Promise<void> {
-        const workbook = new (ExcelJS as any).default.Workbook();
-        let worksheet: any;
+    async writeResult(result: AutomationResult, retries = 3, delay = 2000): Promise<void> {
+        let lastError: any;
+        
+        for (let i = 0; i < retries; i++) {
+            try {
+                const workbook = new (ExcelJS as any).default.Workbook();
+                let worksheet: any;
 
-        if (fs.existsSync(this.resultsPath)) {
-            await workbook.xlsx.readFile(this.resultsPath);
-            worksheet = workbook.getWorksheet(1) || workbook.addWorksheet("Results");
-        } else {
-            worksheet = workbook.addWorksheet("Results");
+                if (fs.existsSync(this.resultsPath)) {
+                    await workbook.xlsx.readFile(this.resultsPath);
+                    worksheet = workbook.getWorksheet(1) || workbook.addWorksheet("Results");
+                } else {
+                    worksheet = workbook.addWorksheet("Results");
+                }
+
+                // Always ensure columns are defined for key-based addRow to work
+                worksheet.columns = [
+                    { header: "Email", key: "email", width: 30 },
+                    { header: "Status", key: "status", width: 15 },
+                    { header: "Timestamp", key: "timestamp", width: 25 },
+                    { header: "Message", key: "message", width: 50 }
+                ];
+
+                worksheet.addRow({
+                    email: result.email,
+                    status: result.status,
+                    timestamp: result.timestamp,
+                    message: result.message
+                });
+
+                await workbook.xlsx.writeFile(this.resultsPath);
+                console.log(`Results saved to ${this.resultsPath}`);
+                return; // Success
+            } catch (err: any) {
+                lastError = err;
+                if (err.message.includes("EBUSY") || err.message.includes("permission denied")) {
+                    console.warn(`[Excel] File locked, retrying in ${delay}ms... (${i + 1}/${retries})`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    throw err; // Non-lock error
+                }
+            }
         }
-
-        // Always ensure columns are defined for key-based addRow to work
-        worksheet.columns = [
-            { header: "Email", key: "email", width: 30 },
-            { header: "Status", key: "status", width: 15 },
-            { header: "Timestamp", key: "timestamp", width: 25 },
-            { header: "Message", key: "message", width: 50 }
-        ];
-
-        worksheet.addRow({
-            email: result.email,
-            status: result.status,
-            timestamp: result.timestamp,
-            message: result.message
-        });
-
-        await workbook.xlsx.writeFile(this.resultsPath);
-        console.log(`Results saved to ${this.resultsPath}`);
+        
+        throw new Error(`Failed to write to Excel after ${retries} attempts: ${lastError?.message}`);
     }
 }

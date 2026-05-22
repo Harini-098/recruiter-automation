@@ -1,51 +1,35 @@
-# Project Recruiter Automation - Phase 3 (Indeed Integration)
+# Project Recruiter Automation - Phase 3 (Indeed & Reliability)
 
 ## Overview
-This project automates the resume update process for candidates across multiple job boards. Phase 3 adds support for Indeed.com, expands the data schema, and includes a backup of Phase 2.
+This project automates the resume update process for candidates across multiple job boards. Phase 3 adds Indeed.com support and introduces a robust logging/error handling framework.
 
 ## Architecture Improvements (Phase 3)
 
-### 1. Indeed.com Integration
-- **Indeed Service**: `src/indeedService.ts` handles Indeed-specific login and resume upload flows.
-- **Stealth Measures**: Uses realistic User-Agents and human-like delays to minimize bot detection on Indeed.
-- **Persistence**: Implements `storageState` to reuse authentication sessions and reduce login attempts.
+### 1. Reliability & Logging Framework
+- **Centralized Logger**: `src/logger.ts` provides structured logging with timestamps and service tags.
+- **Auto-Screenshots**: Every service (Dice, Monster, Indeed) now automatically captures a full-page screenshot on failure, saved to `automation_reports/screenshots/`.
+- **Resilient Excel**: `src/excelHandler.ts` now includes retry logic for result writing, preventing crashes if the Excel file is locked by the user.
+- **Service Isolation**: The orchestrator in `src/index.ts` processes each platform independently. A failure on Dice will no longer prevent updates for Monster or Indeed.
 
-### 2. Expanded Excel Schema
-- The `data.xlsx` file now uses an 8-column structure:
-  - `Column A`: Name
-  - `Column B`: Dice Email
-  - `Column C`: Dice Password
-  - `Column D`: Monster Email
-  - `Column E`: Monster Password
-  - `Column F`: Indeed Email
-  - `Column G`: Indeed Password
-  - `Column H`: Resume Filename (Local file in `/resumes`)
-- `src/excelHandler.ts` has been updated to support this new mapping.
+### 2. Indeed.com Integration
+- **Indeed Service**: `src/indeedService.ts` handles Indeed-specific login (including Google Auth) and resume upload flows.
+- **Persistence**: Uses persistent Chrome profiles per candidate to maintain sessions and reduce login friction.
 
-### 3. Backup Management
-- The Phase 2 state has been archived in `backup/phase-2/` for stability and rollback purposes.
-
-### 4. Multi-Site Orchestration
-- `src/index.ts` now sequentially processes **Dice -> Monster -> Indeed** for each candidate.
+### 3. Expanded Excel Schema
+- The `data.xlsx` file uses an 8-column structure:
+  - `A: Name`, `B: Dice Email`, `C: Dice Password`, `D: Monster Email`, `E: Monster Password`, `F: Indeed Email`, `G: Indeed Password`, `H: Resume Filename`.
 
 ## Key Files
-- `src/index.ts`: Main orchestration logic.
-- `src/diceService.ts`: Dice-specific automation.
-- `src/monsterService.ts`: Monster-specific automation.
-- `src/indeedService.ts`: Indeed-specific automation.
-- `src/excelHandler.ts`: Logic for reading `data.xlsx` and writing `automation_results.xlsx`.
+- `src/index.ts`: Main orchestration logic with service isolation.
+- `src/logger.ts`: Centralized logging and screenshot utility.
+- `src/diceService.ts`, `src/monsterService.ts`, `src/indeedService.ts`: Platform-specific automation.
 
-## Current Status & Limitations
-- **Dice**: Fully stable.
-- **Monster**: Resilient selectors implemented. Note aggressive bot detection.
-- **Indeed**: New implementation. Requires non-headless mode for initial login/CAPTCHA handling if session expires.
-- **Validation**: Project verified with `npx tsc --noEmit`.
+## Monitoring
+- **Logs**: Check `automation_reports/automation.log` for a full audit trail of the bot's actions.
+- **Screenshots**: View `automation_reports/screenshots/` for visual evidence of any failures.
+- **Results**: `data/automation_results.xlsx` contains the final status for each candidate/platform.
 
 ## Usage
-1. Update `data.xlsx` with candidate credentials for all three platforms. **Ensure the Resume Filename is now in Column H.**
-2. Place resumes in the `resumes/` folder.
-3. Run the automation:
-   ```bash
-   npm start
-   ```
-4. Check `automation_results.xlsx` for the status of each account.
+1. Update `data.xlsx` with candidate credentials.
+2. Place resumes in `resumes/`.
+3. Run the automation: `npm start`
