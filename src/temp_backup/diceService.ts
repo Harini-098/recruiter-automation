@@ -10,6 +10,7 @@ export class DiceService {
         private readonly screenshotsDir: string;
         private readonly resumesDir: string;
         private readonly tempDir: string;
+        
         private readonly headless: boolean;
         private readonly slowMo: number;
 
